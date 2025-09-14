@@ -21,9 +21,16 @@ import asyncio
 from openai import AsyncOpenAI
 from openai.helpers import LocalAudioPlayer
 
+
 # Config
 VOICES = ["nova", "shimmer", "echo"]  # Add more voices as desired
-effects = [None, "robot", "telephone", "whisper"]  # Example effects, adjust as supported
+INSTRUCTIONS = [
+    None,
+    "Speak in a dramatic tone.",
+    "Read as if telling a bedtime story.",
+    "Use a cheerful and energetic style.",
+    "Speak slowly and clearly."
+]  # Add more instructions as desired
 STREAM_AUDIO = False  # Set to True to stream audio instead of saving
 
 load_dotenv()
@@ -35,19 +42,20 @@ with open("Audio.txt", "r") as f:
 
 client = AsyncOpenAI(api_key=api_key)
 
-async def synthesize_and_play(text, voice, effect=None):
+async def synthesize_and_play(text, voice, instruction=None):
     params = {
         "model": "gpt-4o-mini-tts",
         "input": text,
         "voice": voice,
         "response_format": "mp3"
     }
-    # if effect:
-    #     params["effects"] = [effect]
+    if instruction:
+        params["instructions"] = instruction
     response = await client.audio.speech.create(**params)
     filename = f"output_{voice}"
-    if effect:
-        filename += f"_{effect}"
+    if instruction:
+        safe_instruction = instruction.replace(" ", "_").replace(".", "").replace(",", "").replace("-", "_")[:30]
+        filename += f"_{safe_instruction}"
     filename += ".mp3"
     with open(filename, "wb") as f:
         f.write(await response.aread())
@@ -58,8 +66,8 @@ async def synthesize_and_play(text, voice, effect=None):
 async def main():
     for text in lines:
         for voice in VOICES:
-            for effect in effects:
-                await synthesize_and_play(text, voice, effect)
+            for instruction in INSTRUCTIONS:
+                await synthesize_and_play(text, voice, instruction)
 
 if __name__ == "__main__":
     asyncio.run(main())
